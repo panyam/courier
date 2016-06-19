@@ -172,22 +172,12 @@ class Parser(object):
         self.lexer.comments_enabled = True
         return fqn
 
-    def ensure_field_path(self):
+    def consume_tokens(self,tok_type):
         """
-        Reads a field_path and returns the source record name as well as the 
-        referenced field path nested within it.
+        Silently consume and ignore a list of tokens of the given type.
         """
-        source_record_name = self.ensure_fqn()
-        field_path = None
-        self.lexer.comments_enabled = False
-        nt1 = self.next_token_if(TokenType.SLASH, consume = True)
-        self.lexer.comments_enabled = True
-        if nt1 is not None:
-            if self.next_token_is(TokenType.IDENTIFIER):
-                field_path = self.ensure_fqn(TokenType.SLASH)
-            else:
-                self.unget_token(nt1)
-        return source_record_name, field_path
+        while self.next_token_if(tok_type, consume = True) is not None:
+            pass
 
 ########################################################################
 ##          Production rules
@@ -211,6 +201,7 @@ def parse_namespace(parser):
     """
     if parser.next_token_is(TokenType.KW_NAMESPACE, consume = True):
         parser.document.namespace = parser.ensure_fqn()
+    parser.consume_tokens(TokenType.SEMI_COLON)
 
 def parse_declaration(parser):
     """
@@ -227,6 +218,7 @@ def parse_declaration(parser):
         parse_import_decl(parser)
     else:
         parse_type_decl(parser)
+    parser.consume_tokens(TokenType.SEMI_COLON)
     return True
 
 def parse_import_decl(parser):
@@ -410,8 +402,10 @@ def parse_record_body(parser, record_type):
         annotations = parse_annotations(parser)
         if parser.next_token_is(TokenType.IDENTIFIER):
             parse_field_decl(parser, record_type, annotations)
+            parser.consume_tokens(TokenType.SEMI_COLON)
         elif parser.next_token_is(TokenType.DOTDOTDOT, consume = True):
             parse_include_decl_body(parser, record_type, annotations)
+            parser.consume_tokens(TokenType.SEMI_COLON)
         else:
             raise UnexpectedTokenException(parser.peek_token(), TokenType.DOTDOTDOT, TokenType.IDENTIFIER)
 
@@ -431,54 +425,9 @@ def parse_field_decl(parser, record_type, annotations):
 
 def parse_include_decl_body(parser, record_type, annotations):
     """
-    Parse the body of an include declaration (ie the bits after "..."):
-
-        # Insert the field at the particular field path into the current context
-        # It is an error if this is a "top" level path as it wont have a field name
-        included_field_decl := 
-                    field_path_decl
-                |   field_path_decl "as" new_field_name
-                |   field_path_decl "as" ":" new_field_type
-                |   field_path_decl "as" new_field_name ":" new_field_type
-                |   field_path_decl "/" ( "*" | "{" "}" | "{" field_selections "}" )  ( "with" "{" field_mapping * "}" ) ?
-                |   "{" included_field_decl * "}"
-
-        field_selections := field_selection ( "," field_selection ) *
-        field_selection := field_name ( "as" new_field_name )
-        field_mapping := FQN
+    Includes another record or type into the current type.
     """
-    annotations = annotations or []
-    annotations.extend(parse_annotations(parser))
-
-    source_record_name, field_path = parser.ensure_field_path()
-    field_include = fields.FieldInclude(source_record_name, field_path, annotations)
-
-    if parser.next_token_is(TokenType.KW_AS, consume = True):
-        # We have a field renaming/retyping
-        field_include.renamed_as = parser.next_token_if(TokenType.IDENTIFIER, consume = True)
-        if parser.next_token_is(TokenType.COLON, consume = True):
-            field_include.retyped_as = parse_any_type_decl(parser)
-
-    elif parser.next_token_is(TokenType.SLASH, consume = True):
-        # Inclusion of multiple fields - "/" has now been consumed
-        if parser.next_token_is(TokenType.STAR, consume = True):
-            # include "all" fields
-            field_include.select_all_fields = True
-        else:
-            parser.ensure_token(TokenType.OPEN_BRACE)
-            field_include.selectors = []
-            while not parser.next_token_is(TokenType.CLOSE_BRACE, consume = True):
-                field_name = parser.ensure_token(TokenType.IDENTIFIER)
-                field_renamed_as = field_name
-                if parser.next_token_is(TokenType.KW_AS, consume = True):
-                    field_renamed_as = parser.ensure_token(TokenType.IDENTIFIER)
-                field_include.selectors.append((field_name, field_renamed_as))
-
-                if not parser.next_token_is(TokenType.COMMA, consume = True):
-                    parser.ensure_token(TokenType.CLOSE_BRACE)
-                    break
-    record_type.type_data.add_field_include_spec(field_include)
-    return field_include
+    pass
 
 ########################################################################
 ##          Annotation Parsing

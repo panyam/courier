@@ -21,6 +21,7 @@ class TokenType(Enum):
     # Special chars/operators etc
     EQUALS              = "="
     COLON               = ":"
+    SEMI_COLON          = ";"
     SLASH               = "/"
     QUESTION            = "?"
     DOT                 = "."
@@ -209,6 +210,8 @@ class Lexer(object):
                 return make_token(TokenType.EQUALS)
             elif self.matches_symbol(':'):
                 return make_token(TokenType.COLON)
+            elif self.matches_symbol(';'):
+                return make_token(TokenType.SEMI_COLON)
             elif self.matches_symbol('*'):
                 return make_token(TokenType.STAR)
             elif self.matches_func(str.isdigit):
