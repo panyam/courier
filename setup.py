@@ -23,11 +23,15 @@ if "install" in sys.argv:
             break
 
 
-# Any packages inside the Courier source folder we dont want in the packages
+# Any packages inside the courier source folder we dont want in the packages
 EXCLUDE_FROM_PACKAGES = [ ]
 
 # Dynamically calculate the version based on courier.VERSION.
 version = __import__('courier').get_version()
+
+print "=" * 80
+print "Packages: ", find_packages(exclude=EXCLUDE_FROM_PACKAGES)
+print "=" * 80
 
 setup(
     name='courierlib',
