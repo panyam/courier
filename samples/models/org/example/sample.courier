@@ -1,0 +1,57 @@
+namespace org.example
+
+import org.example.time.DateTime
+import org.example.Address
+
+typeref Name = string
+
+typeref StringArray = array[string]
+
+typeref NameArrayMap = map[Name, array[int]]
+
+typeref SomeUnion = union[int, string, map[Name, array[int]]]
+
+enum Fruits {
+  @color = "red"
+  APPLE
+
+  /** Yum. */
+  @color = "yellow"
+  BANANA
+
+  @deprecated
+  @color = "orange"
+  ORANGE
+}
+
+record Address {
+    number : string
+    street : string
+    suburb : string
+    country : string
+    zipcode : string
+}
+
+@sources(Address, company = org.example.Company)
+record Person {
+  @default = ""
+  field1: string
+
+  @default = 0
+  field2: int?
+
+  @optional
+  field3: DateTime
+
+  ... user/username
+  ... Company/address/zipcode as companyZipcode
+  ... Company/address/{street, suburb as city}
+  ... Company/*
+  ... Company/address/*
+
+  // applying field mappers to included sections
+  ...
+  @mapper(transformers.mappers.CamelCaseToUnderScoreFieldMapper)
+  @mapper(transformers.mappers.UrnSuffixFieldMapper)
+  Company/address/*
+}
